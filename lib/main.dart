@@ -150,3 +150,80 @@ class _NotesAppState extends State<NotesApp> {
       ),
     );
   }
+ String _getCategoryForDate(String date) {
+    final noteDate = DateFormat('MMMM d, y • h:mm a').parse(date);
+    final now = DateTime.now();
+    final difference = now.difference(noteDate);
+
+    if (difference.inDays == 1) {
+      return "Yesterday";
+    } else if (difference.inDays <= 7) {
+      return "Previous 7 Days";
+    } else if (difference.inDays <= 30) {
+      return "Previous 30 Days";
+    } else {
+      return "Older";
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Notes'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Icon(CupertinoIcons.settings_solid),
+          onPressed: () => _showDevelopersDialog(context),
+        ),
+      ),
+
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CupertinoSearchTextField(
+                controller: _searchController,
+                placeholder: 'Search notes...',
+              ),
+            ),
+            Expanded(
+              child: !_isLoaded
+                  ? const Center(child: CupertinoActivityIndicator())
+                  : _filteredNotes.isEmpty
+                  ? const Center(
+                child: Text(
+                  "No Notes Found",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: CupertinoColors.systemGrey,
+                  ),
+                ),
+              )
+                  : ListView.builder(
+                itemCount: _filteredNotes.length,
+                itemBuilder: (context, index) {
+                  var note = _filteredNotes[index];
+                  String category = _getCategoryForDate(note['date']);
+                  return Dismissible(
+                    key: Key(note['title'] ?? ''),
+                    background: Container(
+                      color: CupertinoColors.destructiveRed,
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: const Icon(CupertinoIcons.delete, color: Colors.white),
+                    ),
+                    onDismissed: (direction) => deleteNote(index),
+                    child: Column(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: CupertinoColors.white,
+                              width: 1.5,
+                            ),
+                          ),
