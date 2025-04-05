@@ -252,3 +252,59 @@ class _EditNotePageState extends State<EditNotePage> {
           },
         ),
       ),
+  child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.date,
+              style: const TextStyle(
+                color: CupertinoColors.systemGrey2,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Title:",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.systemGrey,
+              ),
+            ),
+            const SizedBox(height: 6),
+            CupertinoTextField(
+              controller: titleController,
+              placeholder: "Enter title",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              "Notes:",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.systemGrey,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: CupertinoTextField(
+                controller: contentController,
+                placeholder: "Start typing...",
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                textAlignVertical: TextAlignVertical.top,
+                padding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
