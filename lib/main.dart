@@ -227,3 +227,76 @@ class _NotesAppState extends State<NotesApp> {
                               width: 1.5,
                             ),
                           ),
+ child: CupertinoListTile(
+                            title: Text(
+                              note['title'].isEmpty ? "(No Title)" : note['title'],
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                            subtitle: Text(
+                              '${note['date']} — ${note['content']}',
+                              style: const TextStyle(color: CupertinoColors.systemGrey),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+
+                            onTap: () {
+                              final originalIndex = _allNotes.indexOf(note);
+                              if (originalIndex != -1) {
+                                Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(
+                                    builder: (context) => EditNotePage(
+                                      title: _allNotes[originalIndex]['title'] ?? '',
+                                      content: _allNotes[originalIndex]['content'] ?? '',
+                                      date: _allNotes[originalIndex]['date'] ?? '',
+                                      onSave: (newTitle, newContent) => editNote(index, newTitle, newContent),
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${_filteredNotes.fold<int>(0, (prev, section) => prev + 1)} ${_filteredNotes.isEmpty ? 'No Notes' : 'Notes'}',
+                    style: const TextStyle(
+                      color: CupertinoColors.systemGrey,
+                      fontSize: 14,
+                    ),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: addNote,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.activeBlue,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.pen,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
