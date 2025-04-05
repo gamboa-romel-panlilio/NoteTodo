@@ -106,3 +106,65 @@ class _NotesAppState extends State<NotesApp> {
                     ),
                   ),
                 )
+   : ListView.builder(
+                  itemCount: notesList.length,
+                  itemBuilder: (context, index) {
+                    var note = notesList[index];
+                    return Dismissible(
+                      key: Key((note['title'] ?? '') + index.toString()),
+                      background: Container(
+                        color: CupertinoColors.destructiveRed,
+                        alignment: Alignment.centerRight,
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Icon(CupertinoIcons.delete,
+                            color: Colors.white),
+
+
+                      ),
+                      onDismissed: (direction) => deleteNote(index),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.8), // Dark gray
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: CupertinoColors.white, // White border
+                            width: 1.5, // Border width
+                          ),
+                        ),
+                        child: CupertinoListTile(
+                          title: Text(
+                            note['title'].isEmpty
+                                ? "(No Title)"
+                                : note['title'],
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                          subtitle: Text(
+                            '${note['date'] ?? ''} — ${note['content'].isNotEmpty ? note['content'] : "No additional text"}',
+                            style: const TextStyle(
+                                color: CupertinoColors.systemGrey),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (context) => EditNotePage(
+                                  title: note['title'],
+                                  content: note['content'],
+                                  date: note['date'] ?? '',
+                                  onSave: (newTitle, newContent) =>
+                                      editNote(index, newTitle, newContent),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
