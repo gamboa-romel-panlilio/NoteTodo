@@ -300,3 +300,49 @@ class _NotesAppState extends State<NotesApp> {
     );
   }
 }
+class EditNotePage extends StatefulWidget {
+  final String title;
+  final String content;
+  final String date;
+  final Function(String, String) onSave;
+
+  const EditNotePage({
+    super.key,
+    required this.title,
+    required this.content,
+    required this.date,
+    required this.onSave,
+  });
+
+  @override
+  State<EditNotePage> createState() => _EditNotePageState();
+}
+
+class _EditNotePageState extends State<EditNotePage> {
+  late TextEditingController titleController;
+  late TextEditingController contentController;
+
+  @override
+  void initState() {
+    super.initState();
+    titleController = TextEditingController(text: widget.title);
+    contentController = TextEditingController(text: widget.content);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text("Edit Note"),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Text(
+            "Save",
+            style: TextStyle(color: CupertinoColors.activeBlue),
+          ),
+          onPressed: () {
+            widget.onSave(titleController.text, contentController.text);
+            Navigator.pop(context);
+          },
+        ),
+      ),
