@@ -236,3 +236,145 @@ class _NotesAppState extends State<NotesApp> {
       Navigator.pop(context); // Return to main notes page after unarchiving
     }
   }
+ void _deleteArchivedNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _moveToTrash(note);
+        _saveNotes();
+      });
+      Navigator.pop(context); // return to notes after deletion.
+    }
+  }
+
+  void _showDevelopersDialog(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext context) => CupertinoAlertDialog(
+        title: const Text(
+          'Developers',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Arpon Jolas\n'
+              'Carreon Monica\n'
+              'Gamboa Romel\n'
+              'Gomez Dexter\n'
+              'Larin Kayle',
+          style: TextStyle(fontSize: 18),
+        ),
+        actions: <CupertinoDialogAction>[
+          CupertinoDialogAction(
+            child: const Text('Close', style: TextStyle(fontSize: 18)),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Trash handling functions
+  void _moveToTrash(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes[originalIndex]['isArchived'] = true;
+        _trashedNotes.insert(0, _allNotes.removeAt(originalIndex));
+        _filterNotes();
+        _saveNotes();
+      });
+    }
+  }
+
+  void _restoreFromTrash(dynamic note) {
+    setState(() {
+      note['isArchived'] = false;
+      _allNotes.insert(0, note);
+      _trashedNotes.remove(note);
+      _filterNotes();
+      _saveNotes();
+    });
+    Navigator.pop(context); // Close the trash page after restore
+  }
+
+  void _deleteFromTrash(dynamic note) {
+    setState(() {
+      _trashedNotes.remove(note);
+      _saveNotes();
+    });
+    Navigator.pop(context); // Close the trash page after permanent deletion
+  }
+
+  void _showTrashPage(BuildContext context) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => TrashPage(
+          trashedNotes: _trashedNotes,
+          restoreFromTrash: _restoreFromTrash,
+          deleteFromTrash: _deleteFromTrash,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoteItem(BuildContext context, dynamic note) {
+    if (note['isArchived'] == true) {
+      return const SizedBox.shrink();
+    }
+    return Dismissible(
+      key: UniqueKey(),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          return true;
+        }
+        return false;
+      },
+      onDismissed: (direction) {
+        if (direction == DismissDirection.endToStart) {
+          deleteNote(note);
+        }
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20.0),
+        color: CupertinoColors.destructiveRed,
+        child: const Icon(
+          CupertinoIcons.trash,
+          color: CupertinoColors.white,
+        ),
+      ),
+      child: GestureDetector(
+        onLongPress: () {
+          _showContextMenu(context, note);
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: widget.isDarkMode ? Colors.black : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: widget.isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+              width: 1.5,
+            ),
+          ),
+          child: CupertinoListTile(
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    note['title'].isEmpty ? "(No Title)" : note['title'],
+                    style: TextStyle(fontSize: 18, color: widget.isDarkMode ? CupertinoColors.white : CupertinoColors.black),
+                  ),
+                ),
+                if (note['isPinned'] == true)
+                  const Icon(
+                    CupertinoIcons.pin_fill,
+                    color: CupertinoColors.activeOrange,
+                    size: 16,
+                  ),
+              ],
+            ),
