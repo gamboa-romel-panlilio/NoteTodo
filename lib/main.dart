@@ -131,3 +131,68 @@ void _filterNotes() {
       ),
     );
   }
+ void editNote(int index, String newTitle, String newContent) {
+    final noteToEdit = _allNotes[index];
+    setState(() {
+      noteToEdit['title'] = newTitle;
+      noteToEdit['content'] = newContent;
+      _filterNotes();
+      _saveNotes();
+    });
+  }
+
+  void _pinNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes[originalIndex]['isPinned'] = true;
+        // To visually update the order, trigger a re-filter
+        _filterNotes();
+        _saveNotes();
+      });
+    }
+  }
+
+  void _unpinNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1 && _allNotes[originalIndex]['isPinned'] == true) {
+      setState(() {
+        _allNotes[originalIndex]['isPinned'] = false;
+        // To visually update the order, trigger a re-filter
+        _filterNotes();
+        _saveNotes();
+      });
+    }
+  }
+
+  void _saveNotes() {
+    box.put('notes', _allNotes);
+  }
+
+  void _showDevelopersDialog(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext context) => CupertinoAlertDialog(
+        title: const Text(
+          'Developers',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Arpon Jolas\n'
+              'Carreon Monica\n'
+              'Gamboa Romel\n'
+              'Gomez Dexter\n'
+              'Larin Kayle',
+          style: TextStyle(fontSize: 18),
+        ),
+        actions: <CupertinoDialogAction>[
+          CupertinoDialogAction(
+            child: const Text('Close'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
