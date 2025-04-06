@@ -54,3 +54,80 @@ class _NotesAppState extends State<NotesApp> {
       _isLoaded = true;
     });
   }
+void _filterNotes() {
+    _filterNotesInternal(_allNotes, _searchController.text);
+  }
+
+  void _filterNotesInternal(List<dynamic> notes, String query) {
+    final lowerCaseQuery = query.toLowerCase();
+    setState(() {
+      if (lowerCaseQuery.isEmpty) {
+        _filteredNotes = List.from(notes);
+      } else {
+        _filteredNotes = notes.where((note) {
+          final title = (note['title'] as String?)?.toLowerCase() ?? '';
+          final content = (note['content'] as String?)?.toLowerCase() ?? '';
+          return title.contains(lowerCaseQuery) || content.contains(lowerCaseQuery);
+        }).toList();
+      }
+    });
+  }
+
+  void addNote() {
+    String now = DateFormat('MMMM d, y • h:mm a').format(DateTime.now());
+    final newNote = {
+      "title": "",
+      "content": "",
+      "date": now,
+      "isPinned": false,
+    };
+
+    setState(() {
+      _allNotes.insert(0, newNote);
+      _filterNotes();
+      _saveNotes();
+    });
+
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => EditNotePage(
+          title: "",
+          content: "",
+          date: now,
+          onSave: (newTitle, newContent) {
+            editNote(0, newTitle, newContent);
+          },
+        ),
+      ),
+    );
+  }
+
+  void deleteNote(dynamic noteToDelete) {
+    final originalIndex = _allNotes.indexOf(noteToDelete);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes.removeAt(originalIndex);
+        _filterNotes();
+        _saveNotes();
+      });
+      _showDeleteConfirmation();
+    }
+  }
+
+  void _showDeleteConfirmation() {
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext context) => CupertinoAlertDialog(
+        content: const Text('Note deleted'),
+        actions: <CupertinoDialogAction>[
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
