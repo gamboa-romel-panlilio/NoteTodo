@@ -7,14 +7,42 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox('notes');
-  runApp(const CupertinoApp(
-    debugShowCheckedModeBanner: false,
-    home: NotesApp(),
-  ));
+  runApp(const NotesAppWrapper());
+}
+
+class NotesAppWrapper extends StatefulWidget {
+  const NotesAppWrapper({super.key});
+
+  @override
+  State<NotesAppWrapper> createState() => _NotesAppWrapperState();
+}
+
+class _NotesAppWrapperState extends State<NotesAppWrapper> {
+  bool _isDarkMode = false;
+
+  void _toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoApp(
+      debugShowCheckedModeBanner: false,
+      theme: CupertinoThemeData(
+        brightness: _isDarkMode ? Brightness.dark : Brightness.light,
+      ),
+      home: NotesApp(isDarkMode: _isDarkMode, toggleTheme: _toggleTheme),
+    );
+  }
 }
 
 class NotesApp extends StatefulWidget {
-  const NotesApp({super.key});
+  final bool isDarkMode;
+  final VoidCallback toggleTheme;
+
+  const NotesApp({super.key, required this.isDarkMode, required this.toggleTheme});
 
   @override
   State<NotesApp> createState() => _NotesAppState();
@@ -26,6 +54,7 @@ class _NotesAppState extends State<NotesApp> {
   final box = Hive.box('notes');
   bool _isLoaded = false;
   final TextEditingController _searchController = TextEditingController();
+  List<dynamic> _trashedNotes = [];
 
   List<dynamic> get _pinnedNotes =>
       _filteredNotes.where((note) => note['isPinned'] == true).toList();
@@ -54,7 +83,8 @@ class _NotesAppState extends State<NotesApp> {
       _isLoaded = true;
     });
   }
-void _filterNotes() {
+
+  void _filterNotes() {
     _filterNotesInternal(_allNotes, _searchController.text);
   }
 
@@ -62,12 +92,12 @@ void _filterNotes() {
     final lowerCaseQuery = query.toLowerCase();
     setState(() {
       if (lowerCaseQuery.isEmpty) {
-        _filteredNotes = List.from(notes);
+        _filteredNotes = notes.where((note) => note['isArchived'] == false).toList();
       } else {
         _filteredNotes = notes.where((note) {
           final title = (note['title'] as String?)?.toLowerCase() ?? '';
           final content = (note['content'] as String?)?.toLowerCase() ?? '';
-          return title.contains(lowerCaseQuery) || content.contains(lowerCaseQuery);
+          return (title.contains(lowerCaseQuery) || content.contains(lowerCaseQuery)) && note['isArchived'] == false;
         }).toList();
       }
     });
@@ -80,6 +110,7 @@ void _filterNotes() {
       "content": "",
       "date": now,
       "isPinned": false,
+      "isArchived": false,
     };
 
     setState(() {
@@ -119,10 +150,13 @@ void _filterNotes() {
     showCupertinoDialog(
       context: context,
       builder: (BuildContext context) => CupertinoAlertDialog(
-        content: const Text('Note deleted'),
+        content: const Text(
+          'Note deleted',
+          style: TextStyle(fontSize: 18),
+        ),
         actions: <CupertinoDialogAction>[
           CupertinoDialogAction(
-            child: const Text('OK'),
+            child: const Text('OK', style: TextStyle(fontSize: 18)),
             onPressed: () {
               Navigator.of(context).pop();
             },
@@ -131,11 +165,13 @@ void _filterNotes() {
       ),
     );
   }
- void editNote(int index, String newTitle, String newContent) {
+
+  void editNote(int index, String newTitle, String newContent) {
     final noteToEdit = _allNotes[index];
     setState(() {
       noteToEdit['title'] = newTitle;
       noteToEdit['content'] = newContent;
+      noteToEdit['date'] = DateFormat('MMMM d, y • h:mm a').format(DateTime.now());
       _filterNotes();
       _saveNotes();
     });
@@ -146,7 +182,6 @@ void _filterNotes() {
     if (originalIndex != -1) {
       setState(() {
         _allNotes[originalIndex]['isPinned'] = true;
-        // To visually update the order, trigger a re-filter
         _filterNotes();
         _saveNotes();
       });
@@ -158,7 +193,17 @@ void _filterNotes() {
     if (originalIndex != -1 && _allNotes[originalIndex]['isPinned'] == true) {
       setState(() {
         _allNotes[originalIndex]['isPinned'] = false;
-        // To visually update the order, trigger a re-filter
+        _filterNotes();
+        _saveNotes();
+      });
+    }
+  }
+
+  void _archiveNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes[originalIndex]['isArchived'] = true;
         _filterNotes();
         _saveNotes();
       });
@@ -167,6 +212,40 @@ void _filterNotes() {
 
   void _saveNotes() {
     box.put('notes', _allNotes);
+  }
+
+  void _showArchivePage(BuildContext context) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => ArchivePage(
+          archivedNotes: _allNotes.where((note) => note['isArchived'] == true).toList(),
+          deleteArchivedNote: _deleteArchivedNote,
+          unarchiveNote: _unarchiveNote,
+        ),
+      ),
+    );
+  }
+  void _unarchiveNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes[originalIndex]['isArchived'] = false;
+        _filterNotes();
+        _saveNotes();
+      });
+      Navigator.pop(context); // Return to main notes page after unarchiving
+    }
+  }
+  void _deleteArchivedNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes.removeAt(originalIndex);
+        _saveNotes();
+      });
+      Navigator.pop(context); // return to notes after deletion.
+    }
   }
 
   void _showDevelopersDialog(BuildContext context) {
@@ -187,7 +266,7 @@ void _filterNotes() {
         ),
         actions: <CupertinoDialogAction>[
           CupertinoDialogAction(
-            child: const Text('Close'),
+            child: const Text('Close', style: TextStyle(fontSize: 18)),
             onPressed: () {
               Navigator.of(context).pop();
             },
@@ -196,7 +275,54 @@ void _filterNotes() {
       ),
     );
   }
- Widget _buildNoteItem(BuildContext context, dynamic note) {
+
+  // Trash handling functions
+  void _moveToTrash(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes[originalIndex]['isArchived'] = true;
+        _trashedNotes.insert(0, _allNotes.removeAt(originalIndex));
+        _filterNotes();
+        _saveNotes();
+      });
+    }
+  }
+
+  void _restoreFromTrash(dynamic note) {
+    setState(() {
+      note['isArchived'] = false;
+      _allNotes.insert(0, note);
+      _trashedNotes.remove(note);
+      _filterNotes();
+      _saveNotes();
+    });
+  }
+
+  void _deleteFromTrash(dynamic note) {
+    setState(() {
+      _trashedNotes.remove(note);
+      _saveNotes();
+    });
+  }
+
+  void _showTrashPage(BuildContext context) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => TrashPage(
+          trashedNotes: _trashedNotes,
+          restoreFromTrash: _restoreFromTrash,
+          deleteFromTrash: _deleteFromTrash,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoteItem(BuildContext context, dynamic note) {
+    if (note['isArchived'] == true) {
+      return const SizedBox.shrink();
+    }
     return Dismissible(
       key: UniqueKey(),
       direction: DismissDirection.endToStart,
@@ -227,10 +353,10 @@ void _filterNotes() {
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.8),
+            color: widget.isDarkMode ? Colors.black : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: CupertinoColors.white,
+              color: widget.isDarkMode ? CupertinoColors.white : CupertinoColors.black,
               width: 1.5,
             ),
           ),
@@ -240,7 +366,7 @@ void _filterNotes() {
                 Expanded(
                   child: Text(
                     note['title'].isEmpty ? "(No Title)" : note['title'],
-                    style: const TextStyle(fontSize: 18),
+                    style: TextStyle(fontSize: 18, color: widget.isDarkMode ? CupertinoColors.white : CupertinoColors.black),
                   ),
                 ),
                 if (note['isPinned'] == true)
@@ -253,7 +379,7 @@ void _filterNotes() {
             ),
             subtitle: Text(
               '${note['date']} — ${note['content']}',
-              style: const TextStyle(color: CupertinoColors.systemGrey),
+              style: TextStyle(color: widget.isDarkMode ? CupertinoColors.systemGrey : CupertinoColors.black),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -279,15 +405,90 @@ void _filterNotes() {
       ),
     );
   }
+
+  void _showContextMenu(BuildContext context, dynamic note) {
+    final isPinned = note['isPinned'] as bool? ?? false;
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(
+          note['title'].isEmpty ? "(No Title)" : note['title'],
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        message: Text(
+          note['content'],
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: CupertinoColors.secondaryLabel),
+        ),
+        actions: <CupertinoActionSheetAction>[
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _archiveNote(note);
+            },
+            child: const Text('Archive', style: TextStyle(fontSize: 18)),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              if (isPinned) {
+                _unpinNote(note);
+              } else {
+                _pinNote(note);
+              }
+            },
+            child: Text(isPinned ? 'Unpin' : 'Pin', style: TextStyle(fontSize: 18)),
+          ),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              deleteNote(note);
+            },
+            child: const Text('Delete', style: TextStyle(fontSize: 18)),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Cancel', style: TextStyle(fontSize: 18)),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: const Text('Notes'),
-        trailing: CupertinoButton(
+        leading: CupertinoButton(
           padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.settings_solid),
-          onPressed: () => _showDevelopersDialog(context),
+          child: const Icon(CupertinoIcons.tray),
+          onPressed: () => _showArchivePage(context),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.trash),
+              onPressed: () => _showTrashPage(context),
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: Icon(
+                  widget.isDarkMode ? CupertinoIcons.sun_max : CupertinoIcons.moon_stars),
+              onPressed: () => widget.toggleTheme(),
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.settings_solid),
+              onPressed: () => _showDevelopersDialog(context),
+            ),
+          ],
         ),
       ),
       child: SafeArea(
@@ -358,13 +559,12 @@ void _filterNotes() {
               ),
             ),
             Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${_filteredNotes.length} ${_filteredNotes.isEmpty ? 'No Notes' : 'Notes'}',
+                    '${_filteredNotes.where((note) => note['isArchived'] == false).length} ${_filteredNotes.where((note) => note['isArchived'] == false).isEmpty ? 'No Notes' : 'Notes'}',
                     style: const TextStyle(
                       color: CupertinoColors.systemGrey,
                       fontSize: 14,
@@ -382,64 +582,6 @@ void _filterNotes() {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showContextMenu(BuildContext context, dynamic note) {
-    final isPinned = note['isPinned'] as bool? ?? false;
-    showCupertinoModalPopup(
-      context: context,
-      builder: (context) => CupertinoActionSheet(
-        title: const Text('Options'),
-        actions: <CupertinoActionSheetAction>[
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              final originalIndex = _allNotes.indexOf(note);
-              if (originalIndex != -1) {
-                Navigator.push(
-                  context,
-                  CupertinoPageRoute(
-                    builder: (context) => EditNotePage(
-                      title: note['title'],
-                      content: note['content'],
-                      date: note['date'],
-                      onSave: (newTitle, newContent) =>
-                          editNote(originalIndex, newTitle, newContent),
-                    ),
-                  ),
-                );
-              }
-            },
-            child: const Text('Edit'),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              if (isPinned) {
-                _unpinNote(note);
-              } else {
-                _pinNote(note);
-              }
-            },
-            child: Text(isPinned ? 'Unpin Note' : 'Pin Note'),
-          ),
-          CupertinoActionSheetAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.pop(context);
-              deleteNote(note);
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: const Text('Cancel'),
         ),
       ),
     );
@@ -543,6 +685,228 @@ class _EditNotePageState extends State<EditNotePage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class ArchivePage extends StatelessWidget {
+  final List<dynamic> archivedNotes;
+  final Function(dynamic) deleteArchivedNote;
+  final Function(dynamic) unarchiveNote;
+
+  const ArchivePage({
+    super.key,
+    required this.archivedNotes,
+    required this.deleteArchivedNote,
+    required this.unarchiveNote,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    bool isDarkMode = CupertinoTheme.of(context).brightness == Brightness.dark;
+
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Archived Notes'),
+      ),
+      child: SafeArea(
+        child: archivedNotes.isEmpty
+            ? const Center(
+          child: Text(
+            "No Archived Notes",
+            style: TextStyle(
+              fontSize: 18,
+              color: CupertinoColors.systemGrey,
+            ),
+          ),
+        )
+            : ListView.builder(
+          itemCount: archivedNotes.length,
+          itemBuilder: (context, index) {
+            final note = archivedNotes[index];
+            return GestureDetector(
+              onLongPress: () {
+                _showContextMenu(context, note);
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.black : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+                    width: 1.5,
+                  ),
+                ),
+                child: CupertinoListTile(
+                  title: Text(
+                    note['title'].isEmpty ? "(No Title)" : note['title'],
+                    style: TextStyle(fontSize: 18, color: isDarkMode ? CupertinoColors.white : CupertinoColors.black),
+                  ),
+                  subtitle: Text(
+                    '${note['date']} — ${note['content']}',
+                    style: TextStyle(color: isDarkMode ? CupertinoColors.systemGrey : CupertinoColors.black),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context, dynamic note) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(
+          note['title'].isEmpty ? "(No Title)" : note['title'],
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        message: Text(
+          note['content'],
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: CupertinoColors.secondaryLabel),
+        ),
+        actions: <CupertinoActionSheetAction>[
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              unarchiveNote(note);
+            },
+            child: const Text('Unarchive', style: TextStyle(fontSize: 18)),
+          ),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              deleteArchivedNote(note);
+            },
+            child: const Text('Move to Trash', style: TextStyle(fontSize: 18)),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Cancel', style: TextStyle(fontSize: 18)),
+        ),
+      ),
+    );
+  }
+}
+
+class TrashPage extends StatelessWidget {
+  final List<dynamic> trashedNotes;
+  final Function(dynamic) restoreFromTrash;
+  final Function(dynamic) deleteFromTrash;
+
+  const TrashPage({
+    super.key,
+    required this.trashedNotes,
+    required this.restoreFromTrash,
+    required this.deleteFromTrash,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    bool isDarkMode = CupertinoTheme.of(context).brightness == Brightness.dark;
+
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Trash'),
+      ),
+      child: SafeArea(
+        child: trashedNotes.isEmpty
+            ? const Center(
+          child: Text(
+            "Trash is empty",
+            style: TextStyle(
+              fontSize: 18,
+              color: CupertinoColors.systemGrey,
+            ),
+          ),
+        )
+            : ListView.builder(
+          itemCount: trashedNotes.length,
+          itemBuilder: (context, index) {
+            final note = trashedNotes[index];
+            return GestureDetector(
+              onLongPress: () {
+                _showContextMenu(context, note);
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.black : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+                    width: 1.5,
+                  ),
+                ),
+                child: CupertinoListTile(
+                  title: Text(
+                    note['title'].isEmpty ? "(No Title)" : note['title'],
+                    style: TextStyle(fontSize: 18, color: isDarkMode ? CupertinoColors.white : CupertinoColors.black),
+                  ),
+                  subtitle: Text(
+                    '${note['date']} — ${note['content']}',
+                    style: TextStyle(color: isDarkMode ? CupertinoColors.systemGrey : CupertinoColors.black),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context, dynamic note) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(
+          note['title'].isEmpty ? "(No Title)" : note['title'],
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        message: Text(
+          note['content'],
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: CupertinoColors.secondaryLabel),
+        ),
+        actions: <CupertinoActionSheetAction>[
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              restoreFromTrash(note);
+            },
+            child: const Text('Restore', style: TextStyle(fontSize: 18)),
+          ),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              deleteFromTrash(note);
+            },
+            child: const Text('Delete permanently', style: TextStyle(fontSize: 18)),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Cancel', style: TextStyle(fontSize: 18)),
         ),
       ),
     );
