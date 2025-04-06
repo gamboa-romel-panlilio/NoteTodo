@@ -196,3 +196,86 @@ void _filterNotes() {
       ),
     );
   }
+ Widget _buildNoteItem(BuildContext context, dynamic note) {
+    return Dismissible(
+      key: UniqueKey(),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          return true;
+        }
+        return false;
+      },
+      onDismissed: (direction) {
+        if (direction == DismissDirection.endToStart) {
+          deleteNote(note);
+        }
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20.0),
+        color: CupertinoColors.destructiveRed,
+        child: const Icon(
+          CupertinoIcons.trash,
+          color: CupertinoColors.white,
+        ),
+      ),
+      child: GestureDetector(
+        onLongPress: () {
+          _showContextMenu(context, note);
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: CupertinoColors.white,
+              width: 1.5,
+            ),
+          ),
+          child: CupertinoListTile(
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    note['title'].isEmpty ? "(No Title)" : note['title'],
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+                if (note['isPinned'] == true)
+                  const Icon(
+                    CupertinoIcons.pin_fill,
+                    color: CupertinoColors.activeOrange,
+                    size: 16,
+                  ),
+              ],
+            ),
+            subtitle: Text(
+              '${note['date']} — ${note['content']}',
+              style: const TextStyle(color: CupertinoColors.systemGrey),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onTap: () {
+              final originalIndex = _allNotes.indexOf(note);
+              if (originalIndex != -1) {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (context) => EditNotePage(
+                      title: note['title'],
+                      content: note['content'],
+                      date: note['date'],
+                      onSave: (newTitle, newContent) =>
+                          editNote(originalIndex, newTitle, newContent),
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
