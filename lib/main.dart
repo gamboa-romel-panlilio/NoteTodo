@@ -102,3 +102,137 @@ class _NotesAppState extends State<NotesApp> {
       }
     });
   }
+ void addNote() {
+    String now = DateFormat('MMMM d, y • h:mm a').format(DateTime.now());
+    final newNote = {
+      "title": "",
+      "content": "",
+      "date": now,
+      "isPinned": false,
+      "isArchived": false,
+    };
+
+    setState(() {
+      _allNotes.insert(0, newNote);
+      _filterNotes();
+      _saveNotes();
+    });
+
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => EditNotePage(
+          title: "",
+          content: "",
+          date: now,
+          onSave: (newTitle, newContent) {
+            editNote(0, newTitle, newContent);
+          },
+        ),
+      ),
+    );
+  }
+
+  void deleteNote(dynamic noteToDelete) {
+    final originalIndex = _allNotes.indexOf(noteToDelete);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes.removeAt(originalIndex);
+        _filterNotes();
+        _saveNotes();
+      });
+      _showDeleteConfirmation();
+    }
+  }
+
+  void _showDeleteConfirmation() {
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext context) => CupertinoAlertDialog(
+        content: const Text(
+          'Note deleted',
+          style: TextStyle(fontSize: 18),
+        ),
+        actions: <CupertinoDialogAction>[
+          CupertinoDialogAction(
+            child: const Text('OK', style: TextStyle(fontSize: 18)),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void editNote(int index, String newTitle, String newContent) {
+    final noteToEdit = _allNotes[index];
+    setState(() {
+      noteToEdit['title'] = newTitle;
+      noteToEdit['content'] = newContent;
+      noteToEdit['date'] = DateFormat('MMMM d, y • h:mm a').format(DateTime.now());
+      _filterNotes();
+      _saveNotes();
+    });
+  }
+
+  void _pinNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes[originalIndex]['isPinned'] = true;
+        _filterNotes();
+        _saveNotes();
+      });
+    }
+  }
+
+  void _unpinNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1 && _allNotes[originalIndex]['isPinned'] == true) {
+      setState(() {
+        _allNotes[originalIndex]['isPinned'] = false;
+        _filterNotes();
+        _saveNotes();
+      });
+    }
+  }
+
+  void _archiveNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes[originalIndex]['isArchived'] = true;
+        _filterNotes();
+        _saveNotes();
+      });
+    }
+  }
+
+  void _saveNotes() {
+    box.put('notes', _allNotes);
+  }
+
+  void _showArchivePage(BuildContext context) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => ArchivePage(
+          archivedNotes: _allNotes.where((note) => note['isArchived'] == true).toList(),
+          deleteArchivedNote: _deleteArchivedNote,
+          unarchiveNote: _unarchiveNote,
+        ),
+      ),
+    );
+  }
+  void _unarchiveNote(dynamic note) {
+    final originalIndex = _allNotes.indexOf(note);
+    if (originalIndex != -1) {
+      setState(() {
+        _allNotes[originalIndex]['isArchived'] = false;
+        _filterNotes();
+        _saveNotes();
+      });
+      Navigator.pop(context); // Return to main notes page after unarchiving
+    }
+  }
