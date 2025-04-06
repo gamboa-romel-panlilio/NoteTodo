@@ -378,3 +378,122 @@ class _NotesAppState extends State<NotesApp> {
                   ),
               ],
             ),
+  subtitle: Text(
+              '${note['date']} — ${note['content']}',
+              style: TextStyle(color: widget.isDarkMode ? CupertinoColors.systemGrey : CupertinoColors.black),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onTap: () {
+              final originalIndex = _allNotes.indexOf(note);
+              if (originalIndex != -1) {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (context) => EditNotePage(
+                      title: note['title'],
+                      content: note['content'],
+                      date: note['date'],
+                      onSave: (newTitle, newContent) =>
+                          editNote(originalIndex, newTitle, newContent),
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context, dynamic note) {
+    final isPinned = note['isPinned'] as bool? ?? false;
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(
+          note['title'].isEmpty ? "(No Title)" : note['title'],
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        message: Text(
+          note['content'],
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: CupertinoColors.secondaryLabel),
+        ),
+        actions: <CupertinoActionSheetAction>[
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _archiveNote(note);
+            },
+            child: const Text('Archive', style: TextStyle(fontSize: 18)),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              if (isPinned) {
+                _unpinNote(note);
+              } else {
+                _pinNote(note);
+              }
+            },
+            child: Text(isPinned ? 'Unpin' : 'Pin', style: TextStyle(fontSize: 18)),
+          ),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              deleteNote(note);
+            },
+            child: const Text('Delete', style: TextStyle(fontSize: 18)),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Cancel', style: TextStyle(fontSize: 18)),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Notes'),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.tray),
+              onPressed: () => _showArchivePage(context),
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.trash),
+              onPressed: () => _showTrashPage(context),
+            ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: Icon(
+                  widget.isDarkMode ? CupertinoIcons.sun_max : CupertinoIcons.moon_stars),
+              onPressed: () => widget.toggleTheme(),
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.settings_solid),
+              onPressed: () => _showDevelopersDialog(context),
+            ),
+          ],
+        ),
+      ),
