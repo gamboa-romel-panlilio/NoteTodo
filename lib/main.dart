@@ -279,3 +279,272 @@ void _filterNotes() {
       ),
     );
   }
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Notes'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Icon(CupertinoIcons.settings_solid),
+          onPressed: () => _showDevelopersDialog(context),
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CupertinoSearchTextField(
+                controller: _searchController,
+                placeholder: 'Search notes...',
+                onChanged: (_) => _filterNotes(),
+              ),
+            ),
+            Expanded(
+              child: !_isLoaded
+                  ? const Center(child: CupertinoActivityIndicator())
+                  : _filteredNotes.isEmpty
+                  ? const Center(
+                child: Text(
+                  "No Notes Found",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: CupertinoColors.systemGrey,
+                  ),
+                ),
+              )
+                  : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_pinnedNotes.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'Pinned Notes',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: CupertinoColors.activeOrange,
+                          ),
+                        ),
+                      ),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _pinnedNotes.length,
+                        itemBuilder: (context, index) =>
+                            _buildNoteItem(context, _pinnedNotes[index]),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Divider(
+                          color: CupertinoColors.separator,
+                        ),
+                      ),
+                    ],
+                    if (_unpinnedNotes.isNotEmpty) ...[
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _unpinnedNotes.length,
+                        itemBuilder: (context, index) =>
+                            _buildNoteItem(context, _unpinnedNotes[index]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${_filteredNotes.length} ${_filteredNotes.isEmpty ? 'No Notes' : 'Notes'}',
+                    style: const TextStyle(
+                      color: CupertinoColors.systemGrey,
+                      fontSize: 14,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: addNote,
+                    child: const Icon(
+                      CupertinoIcons.pencil_outline,
+                      color: CupertinoColors.activeBlue,
+                      size: 28,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context, dynamic note) {
+    final isPinned = note['isPinned'] as bool? ?? false;
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('Options'),
+        actions: <CupertinoActionSheetAction>[
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              final originalIndex = _allNotes.indexOf(note);
+              if (originalIndex != -1) {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (context) => EditNotePage(
+                      title: note['title'],
+                      content: note['content'],
+                      date: note['date'],
+                      onSave: (newTitle, newContent) =>
+                          editNote(originalIndex, newTitle, newContent),
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text('Edit'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              if (isPinned) {
+                _unpinNote(note);
+              } else {
+                _pinNote(note);
+              }
+            },
+            child: Text(isPinned ? 'Unpin Note' : 'Pin Note'),
+          ),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              deleteNote(note);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+  }
+}
+
+class EditNotePage extends StatefulWidget {
+  final String title;
+  final String content;
+  final String date;
+  final Function(String, String) onSave;
+
+  const EditNotePage({
+    super.key,
+    required this.title,
+    required this.content,
+    required this.date,
+    required this.onSave,
+  });
+
+  @override
+  State<EditNotePage> createState() => _EditNotePageState();
+}
+
+class _EditNotePageState extends State<EditNotePage> {
+  late TextEditingController titleController;
+  late TextEditingController contentController;
+
+  @override
+  void initState() {
+    super.initState();
+    titleController = TextEditingController(text: widget.title);
+    contentController = TextEditingController(text: widget.content);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text("Edit Note"),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Text(
+            "Save",
+            style: TextStyle(color: CupertinoColors.activeBlue),
+          ),
+          onPressed: () {
+            widget.onSave(titleController.text, contentController.text);
+            Navigator.pop(context);
+          },
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.date,
+              style: const TextStyle(
+                color: CupertinoColors.systemGrey2,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Title:",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.systemGrey,
+              ),
+            ),
+            const SizedBox(height: 6),
+            CupertinoTextField(
+              controller: titleController,
+              placeholder: "Enter title",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              "Notes:",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.systemGrey,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: CupertinoTextField(
+                controller: contentController,
+                placeholder: "Start typing...",
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                textAlignVertical: TextAlignVertical.top,
+                padding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
