@@ -652,7 +652,7 @@ class _EditNotePageState extends State<EditNotePage> {
                 fontSize: 14,
               ),
             ),
-            const SizedBox(height: 30), // Increased spacing here
+            const SizedBox(height: 30),
             const Text(
               "Title:",
               style: TextStyle(
@@ -661,7 +661,7 @@ class _EditNotePageState extends State<EditNotePage> {
                 color: CupertinoColors.systemGrey,
               ),
             ),
-            const SizedBox(height: 12), // Increased spacing here
+            const SizedBox(height: 12),
             CupertinoTextField(
               controller: titleController,
               placeholder: "Enter title",
