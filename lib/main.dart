@@ -918,3 +918,4 @@ class TrashPage extends StatelessWidget {
     );
   }
 }
+
