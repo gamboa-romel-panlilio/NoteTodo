@@ -102,6 +102,7 @@ class _NotesAppState extends State<NotesApp> {
       }
     });
   }
+
   void addNote() {
     String now = DateFormat('MMMM d, y • h:mm a').format(DateTime.now());
     final newNote = {
@@ -225,6 +226,7 @@ class _NotesAppState extends State<NotesApp> {
       ),
     );
   }
+
   void _unarchiveNote(dynamic note) {
     final originalIndex = _allNotes.indexOf(note);
     if (originalIndex != -1) {
@@ -236,6 +238,7 @@ class _NotesAppState extends State<NotesApp> {
       Navigator.pop(context); // Return to main notes page after unarchiving
     }
   }
+
   void _deleteArchivedNote(dynamic note) {
     final originalIndex = _allNotes.indexOf(note);
     if (originalIndex != -1) {
@@ -680,15 +683,14 @@ class _EditNotePageState extends State<EditNotePage> {
               ),
             ),
             const SizedBox(height: 6),
-            Expanded(
-              child: CupertinoTextField(
-                controller: contentController,
-                placeholder: "Start typing...",
-                maxLines: null,
-                keyboardType: TextInputType.multiline,
-                textAlignVertical: TextAlignVertical.top,
-                padding: const EdgeInsets.all(12),
-              ),
+            CupertinoTextField(
+              controller: contentController,
+              placeholder: "Type here...",
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              textAlignVertical: TextAlignVertical.top,
+              padding: const EdgeInsets.all(12),
+              style: const TextStyle(fontSize: 16),
             ),
           ],
         ),
