@@ -102,7 +102,7 @@ class _NotesAppState extends State<NotesApp> {
       }
     });
   }
- void addNote() {
+  void addNote() {
     String now = DateFormat('MMMM d, y • h:mm a').format(DateTime.now());
     final newNote = {
       "title": "",
@@ -236,7 +236,7 @@ class _NotesAppState extends State<NotesApp> {
       Navigator.pop(context); // Return to main notes page after unarchiving
     }
   }
- void _deleteArchivedNote(dynamic note) {
+  void _deleteArchivedNote(dynamic note) {
     final originalIndex = _allNotes.indexOf(note);
     if (originalIndex != -1) {
       setState(() {
@@ -378,7 +378,7 @@ class _NotesAppState extends State<NotesApp> {
                   ),
               ],
             ),
-  subtitle: Text(
+            subtitle: Text(
               '${note['date']} — ${note['content']}',
               style: TextStyle(color: widget.isDarkMode ? CupertinoColors.systemGrey : CupertinoColors.black),
               maxLines: 1,
@@ -497,7 +497,7 @@ class _NotesAppState extends State<NotesApp> {
           ],
         ),
       ),
-child: SafeArea(
+      child: SafeArea(
         child: Column(
           children: [
             Padding(
@@ -652,7 +652,7 @@ class _EditNotePageState extends State<EditNotePage> {
                 fontSize: 14,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 30), // Increased spacing here
             const Text(
               "Title:",
               style: TextStyle(
@@ -661,7 +661,7 @@ class _EditNotePageState extends State<EditNotePage> {
                 color: CupertinoColors.systemGrey,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 12), // Increased spacing here
             CupertinoTextField(
               controller: titleController,
               placeholder: "Enter title",
@@ -918,4 +918,3 @@ class TrashPage extends StatelessWidget {
     );
   }
 }
-
